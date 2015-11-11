@@ -5,21 +5,22 @@ Once the extension is installed, simply modify your application configuration as
 
 ```php
 return [
-	'components' => [
-		....
-		'authManager' => [
-			'class' => 'yii\rbac\DbManager',
-		]
-	],
-	'as access' => [
+    'components' => [
+        ....
+        'authManager' => [
+            'class' => 'yii\rbac\DbManager',
+            'defaultRoles' => ['public', 'authenticated'],
+        ]
+    ],
+    'as access' => [
         'class' => 'mgcode\auth\components\AccessControl',
         'app' => 'backend',
         'allowActions' => [
             'site/error'
         ],
-		'disallowActions' => [
-			'disabled/action',
-		]
+        'disallowActions' => [
+            'disabled/action',
+        ]
     ],
 ];
 ```
