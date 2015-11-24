@@ -23,6 +23,17 @@ trait MigrationHelperTrait {
         }
     }
 
+    protected function addRole($name)
+    {
+        $authManager = Yii::$app->authManager;
+        $role = $authManager->getRole($name);
+        if(!$role) {
+            $role = $authManager->createRole($name);
+            $authManager->add($role);
+            $this->msg('Added new role {name}', ['name' => $name]);
+        }
+    }
+
     protected function addItemToRole($child, $parent)
     {
         $authManager = Yii::$app->authManager;
