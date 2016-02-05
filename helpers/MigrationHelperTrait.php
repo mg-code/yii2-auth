@@ -23,6 +23,19 @@ trait MigrationHelperTrait {
         }
     }
 
+    protected function renameItem($oldName, $newName)
+    {
+        $authManager = Yii::$app->authManager;
+        $item = $authManager->getPermission($oldName);
+        if(!$item) {
+            throw new InvalidParamException('item not found');
+        }
+
+        $item->name = $newName;
+        $authManager->update($oldName, $item);
+        $this->msg('Renamed permission {oldName} to {newName}', ['oldName' => $oldName, 'newName' => $newName]);
+    }
+
     protected function addItemToItem($child, $parent)
     {
         $authManager = Yii::$app->authManager;
