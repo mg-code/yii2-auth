@@ -23,6 +23,27 @@ trait MigrationHelperTrait {
         }
     }
 
+    protected function addItemToItem($child, $parent)
+    {
+        $authManager = Yii::$app->authManager;
+
+        $childItem = $authManager->getPermission($child);
+        if(!$childItem) {
+            throw new InvalidParamException('child item not found');
+        }
+
+        $parentItem = $authManager->getPermission($parent);
+        if(!$parentItem) {
+            throw new InvalidParamException('parent item not found');
+        }
+
+        $children = $authManager->getChildren($parent);
+        if(!array_key_exists($child, $children)) {
+            $authManager->addChild($parentItem, $childItem);
+            $this->msg('Added {child} to {parent}', ['child' => $child, 'parent' => $parent]);
+        }
+    }
+
     protected function addRole($name)
     {
         $authManager = Yii::$app->authManager;
