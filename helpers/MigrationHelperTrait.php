@@ -88,4 +88,25 @@ trait MigrationHelperTrait {
             $this->msg('Added {child} to {parent}', ['child' => $child, 'parent' => $parent]);
         }
     }
+
+    protected function addRoleToRole($child, $parent)
+    {
+        $authManager = Yii::$app->authManager;
+
+        $childRole = $authManager->getRole($child);
+        if(!$childRole) {
+            throw new InvalidParamException('item not found');
+        }
+
+        $role = $authManager->getRole($parent);
+        if(!$role) {
+            throw new InvalidParamException('role not found');
+        }
+
+        $children = $authManager->getChildren($parent);
+        if(!array_key_exists($child, $children)) {
+            $authManager->addChild($role, $childRole);
+            $this->msg('Added {child} to {parent}', ['child' => $child, 'parent' => $parent]);
+        }
+    }
 }
