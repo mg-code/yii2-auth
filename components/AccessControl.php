@@ -70,11 +70,13 @@ class AccessControl extends \yii\base\ActionFilter
             return true;
         }
 
+        $params = Yii::$app->request->get();
+
         // Whether has access to parent object
         $obj = $action->controller;
         do {
             $permission = "/{$this->app}/".ltrim($obj->getUniqueId().'/*', '/');
-            if ($user->can($permission)) {
+            if ($user->can($permission, $params)) {
                 return true;
             }
             $obj = $obj->module;
