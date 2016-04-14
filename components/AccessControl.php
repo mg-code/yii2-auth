@@ -99,7 +99,7 @@ class AccessControl extends \yii\base\ActionFilter
      */
     protected function denyAccess($user)
     {
-        if ($user->getIsGuest()) {
+        if ($user->getIsGuest() && $user->loginUrl) {
             $user->loginRequired();
             Yii::$app->end();
         } else {
@@ -114,8 +114,14 @@ class AccessControl extends \yii\base\ActionFilter
     {
         $uniqueId = $action->getUniqueId();
 
+        // error action route
+        $errorAction = Yii::$app->getErrorHandler()->errorAction;
+        if($errorAction === null) {
+            $errorAction = 'site/error';
+        }
+
         // Error action is allowed
-        if ($uniqueId === Yii::$app->getErrorHandler()->errorAction) {
+        if ($uniqueId === $errorAction) {
             return false;
         }
 
