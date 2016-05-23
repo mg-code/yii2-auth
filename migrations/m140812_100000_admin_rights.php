@@ -2,12 +2,28 @@
 
 use yii\db\Schema;
 use yii\db\Migration;
+use yii\rbac\DbManager;
 
 class m140812_100000_admin_rights extends Migration
 {
+    public $authManagerName = 'authManager';
+
+    /**
+     * @throws yii\base\InvalidConfigException
+     * @return DbManager
+     */
+    protected function getAuthManager()
+    {
+        $authManager = Yii::$app->get($this->authManagerName);
+        if (!$authManager instanceof DbManager) {
+            throw new \yii\base\InvalidConfigException('You should configure "authManager" component to use database before executing this migration.');
+        }
+        return $authManager;
+    }
+
     public function up()
     {
-        $authManager = Yii::$app->authManager;
+        $authManager = $this->getAuthManager();
 
         $item = $authManager->getPermission('/*');
         if(!$item) {
@@ -24,7 +40,7 @@ class m140812_100000_admin_rights extends Migration
 
     public function down()
     {
-        echo "m140812_114939_rbac_authitem cannot be reverted.\n";
+        echo "m140812_100000_admin_rights cannot be reverted.\n";
 
         return false;
     }

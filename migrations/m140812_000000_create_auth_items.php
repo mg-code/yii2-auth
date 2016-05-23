@@ -2,12 +2,29 @@
 
 use yii\db\Schema;
 use yii\db\Migration;
+use yii\rbac\DbManager;
 
 class m140812_000000_create_auth_items extends Migration
 {
+    public $authManagerName = 'authManager';
+
+
+    /**
+     * @throws yii\base\InvalidConfigException
+     * @return DbManager
+     */
+    protected function getAuthManager()
+    {
+        $authManager = Yii::$app->get($this->authManagerName);
+        if (!$authManager instanceof DbManager) {
+            throw new \yii\base\InvalidConfigException('You should configure "authManager" component to use database before executing this migration.');
+        }
+        return $authManager;
+    }
+
     public function up()
     {
-        $authManager = Yii::$app->getAuthManager();
+        $authManager = $this->getAuthManager();
 
         $item = $authManager->getRole('admin');
         if(!$item) {
@@ -27,7 +44,7 @@ class m140812_000000_create_auth_items extends Migration
 
     protected function createAdmin()
     {
-        $authManager = Yii::$app->getAuthManager();
+        $authManager = $this->getAuthManager();
 
         $role = $authManager->createRole('admin');
         $authManager->add($role);
@@ -36,7 +53,7 @@ class m140812_000000_create_auth_items extends Migration
 
     protected function createPublic()
     {
-        $authManager = Yii::$app->getAuthManager();
+        $authManager = $this->getAuthManager();
 
         $role = $authManager->createRole('public');
         $authManager->add($role);
@@ -44,7 +61,7 @@ class m140812_000000_create_auth_items extends Migration
 
     protected function createAuthenticated()
     {
-        $authManager = Yii::$app->getAuthManager();
+        $authManager = $this->getAuthManager();
 
         $rule = new \mgcode\auth\rules\AuthenticatedRule();
         $authManager->add($rule);
@@ -57,7 +74,7 @@ class m140812_000000_create_auth_items extends Migration
 
     public function down()
     {
-        echo "m150828_095206_create_auth_items cannot be reverted.\n";
+        echo "m140812_000000_create_auth_items cannot be reverted.\n";
 
         return false;
     }
