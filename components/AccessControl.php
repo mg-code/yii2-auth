@@ -2,7 +2,6 @@
 
 namespace mgcode\auth\components;
 
-use yii\base\InvalidConfigException;
 use yii\web\ForbiddenHttpException;
 use yii\base\Module;
 use Yii;
@@ -16,22 +15,24 @@ use Yii;
  * ~~~
  * 'as access' => [
  *     'class' => 'mgcode\auth\components\AccessControl',
+ *     'app' => 'backend',
  *     'allowActions' => ['site/login', 'site/error'],
  *     'disallowActions' => ['disabled/action']
  * ]
  * ~~~
- * @author Misbahul D Munir <misbahuldmunir@gmail.com>
- * @author Maris Graudins <m.graudins@yahoo.com>
+ * @author Maris Graudins <maris@mg-interactive.lv>
  */
 class AccessControl extends \yii\base\ActionFilter
 {
+    /**
+     * @var null|string By default no application prefix used.
+     */
     public $app;
 
     /**
      * @var array List of action that not need to check access.
      */
     public $allowActions = [];
-
 
     /**
      * @var array List of action that are disallowed.
@@ -44,13 +45,11 @@ class AccessControl extends \yii\base\ActionFilter
     public function init()
     {
         parent::init();
-        if (!$this->app) {
-            throw new InvalidConfigException('Property `app` must be set.');
-        }
     }
 
     /**
      * @inheritdoc
+     * @return bool|void
      */
     public function beforeAction($action)
     {
@@ -62,30 +61,29 @@ class AccessControl extends \yii\base\ActionFilter
             return false;
         }
 
-        $actionId = $action->getUniqueId();
-
-        // Whether has access directly to action
-        $permission = "/{$this->app}/$actionId";
-        if ($user->can($permission)) {
-            return true;
+        // Permission name and parameters
+        $permission = '/'.$action->getUniqueId();
+        if($this->app) {
+            $permission = '/'.$this->app.$permission;
         }
-
         $params = Yii::$app->request->get();
 
-        // Whether has access to parent object
-        $obj = $action->controller;
+        // Check permission to action
+        if ($user->can($permission, $params)) {
+            return true;
+        }
+        
+        // Check permission of parents
         do {
-            $permission = "/{$this->app}/".ltrim($obj->getUniqueId().'/*', '/');
+            $permission = rtrim($permission, '/*');
+            $explode = explode('/', $permission);
+            array_pop($explode);
+            $permission = implode('/', $explode).'/*';
+
             if ($user->can($permission, $params)) {
                 return true;
             }
-            $obj = $obj->module;
-        } while ($obj !== null);
-
-        // Whether has access to all actions
-        if ($user->can('/*')) {
-            return true;
-        }
+        } while($permission != '/*');
 
         $this->denyAccess($user);
     }
