@@ -3,7 +3,6 @@
 namespace mgcode\auth\components;
 
 use yii\web\ForbiddenHttpException;
-use yii\base\Module;
 use Yii;
 
 /**
@@ -45,6 +44,7 @@ class AccessControl extends \yii\base\ActionFilter
     public function init()
     {
         parent::init();
+        $this->initAllowActions();
     }
 
     /**
@@ -53,39 +53,100 @@ class AccessControl extends \yii\base\ActionFilter
      */
     public function beforeAction($action)
     {
-         $user = Yii::$app->user;
+        $user = Yii::$app->user;
 
-        // Check disallowed actions
-        if($this->matchActions($action, $this->disallowActions)) {
-            $this->denyAccess($user);
+        // Check for allowedAction method and match. This works only for checking acces of current action.
+        if ($action->controller->hasMethod('allowAction') && in_array($action->id, $action->controller->allowAction())) {
             return false;
         }
 
-        // Permission name and parameters
-        $permission = '/'.$action->getUniqueId();
-        if($this->app) {
-            $permission = '/'.$this->app.$permission;
+        $permissionName = $action->getUniqueId();
+        if ($this->app) {
+            $permissionName = $this->app.'/'.$permissionName;
         }
         $params = Yii::$app->request->get();
-
-        // Check permission to action
-        if ($user->can($permission, $params)) {
+        if (static::can($permissionName, $params)) {
             return true;
         }
-        
+        $this->denyAccess($user);
+    }
+
+    /**
+     * Checks if current user has access to url route.
+     * @param string $permissionName
+     * @param array $params
+     * @return bool
+     */
+    public static function can($permissionName, $params = [])
+    {
+        $user = Yii::$app->user;
+        $access = Yii::$app->getBehavior('access');
+        if (!($access instanceof AccessControl)) {
+            $access = null;
+        }
+
+        if (substr($permissionName, 0, 1) !== '/') {
+            $permissionName = '/'.$permissionName;
+        }
+
+        // Check disallowed actions
+        if ($access && static::matchActions($permissionName, $access->disallowActions, $access->app)) {
+            return false;
+        }
+
+        // Check allowed actions
+        if ($access && static::matchActions($permissionName, $access->allowActions, $access->app)) {
+            return true;
+        }
+
+        // Check permission of action
+        if ($user->can($permissionName, $params)) {
+            return true;
+        }
+
         // Check permission of parents
         do {
-            $permission = rtrim($permission, '/*');
-            $explode = explode('/', $permission);
+            $permissionName = rtrim($permissionName, '/*');
+            $explode = explode('/', $permissionName);
             array_pop($explode);
-            $permission = implode('/', $explode).'/*';
+            $permissionName = implode('/', $explode).'/*';
 
-            if ($user->can($permission, $params)) {
+            if ($user->can($permissionName, $params)) {
                 return true;
             }
-        } while($permission != '/*');
+        } while ($permissionName != '/*');
 
-        $this->denyAccess($user);
+        return false;
+    }
+
+    /**
+     * Match action against action list
+     * @param string $action
+     * @param array $actions
+     * @param string| null $app
+     * @return bool
+     */
+    protected static function matchActions($action, array $actions, $app)
+    {
+        if ($app) {
+            $action = substr($action, strlen('/'.$app));
+        }
+
+        foreach ($actions as $route) {
+            if (substr($route, 0, 1) !== '/') {
+                $route = '/'.$route;
+            }
+            if (substr($route, -1) === '*') {
+                $route = rtrim($route, "*");
+                if ($route === '/' || strpos($action, $route) === 0) {
+                    return true;
+                }
+            } else if ($action === $route) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -106,74 +167,21 @@ class AccessControl extends \yii\base\ActionFilter
     }
 
     /**
-     * @inheritdoc
+     * Initializes default allowed actions
      */
-    protected function isActive($action)
+    protected function initAllowActions()
     {
-        $uniqueId = $action->getUniqueId();
-
-        // error action route
+        // Error action is allowed
         $errorAction = Yii::$app->getErrorHandler()->errorAction;
-        if($errorAction === null) {
+        if ($errorAction === null) {
             $errorAction = 'site/error';
         }
+        $this->allowActions[] = $errorAction;
 
-        // Error action is allowed
-        if ($uniqueId === $errorAction) {
-            return false;
+        // Login action is allowed
+        $loginUrl = Yii::$app->user->loginUrl;
+        if (is_array($loginUrl) && isset($loginUrl[0])) {
+            $this->allowActions[] = $loginUrl[0];
         }
-
-        // Match allowed actions
-        if($this->matchActions($action, $this->allowActions)) {
-            return false;
-        }
-
-        // Check for allowedAction method and match
-        if ($action->controller->hasMethod('allowAction') && in_array($action->id, $action->controller->allowAction())) {
-            return false;
-        }
-
-        // Login page is allowed
-        $user = Yii::$app->user;
-        if ($user->getIsGuest() && is_array($user->loginUrl) && isset($user->loginUrl[0]) && $uniqueId === trim($user->loginUrl[0], '/')) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * @param \yii\base\Action $action
-     * @param array $actions
-     * @return bool
-     */
-    protected function matchActions($action, array $actions)
-    {
-        $uniqueId = $action->getUniqueId();
-        if ($this->owner instanceof Module) {
-            // convert action uniqueId into an ID relative to the module
-            $mid = $this->owner->getUniqueId();
-            $id = $uniqueId;
-            if ($mid !== '' && strpos($id, $mid.'/') === 0) {
-                $id = substr($id, strlen($mid) + 1);
-            }
-        } else {
-            $id = $action->id;
-        }
-
-        foreach ($actions as $route) {
-            if (substr($route, -1) === '*') {
-                $route = rtrim($route, "*");
-                if ($route === '' || strpos($id, $route) === 0) {
-                    return true;
-                }
-            } else {
-                if ($id === $route) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 }
