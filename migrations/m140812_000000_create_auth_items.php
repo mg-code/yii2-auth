@@ -8,7 +8,6 @@ class m140812_000000_create_auth_items extends Migration
 {
     public $authManagerName = 'authManager';
 
-
     /**
      * @throws yii\base\InvalidConfigException
      * @return DbManager
@@ -27,17 +26,17 @@ class m140812_000000_create_auth_items extends Migration
         $authManager = $this->getAuthManager();
 
         $item = $authManager->getRole('admin');
-        if(!$item) {
+        if (!$item) {
             $this->createAdmin();
         }
 
         $item = $authManager->getRole('public');
-        if(!$item) {
+        if (!$item) {
             $this->createPublic();
         }
 
         $item = $authManager->getRole('authenticated');
-        if(!$item) {
+        if (!$item) {
             $this->createAuthenticated();
         }
     }
@@ -49,7 +48,6 @@ class m140812_000000_create_auth_items extends Migration
         $role = $authManager->createRole('admin');
         $authManager->add($role);
     }
-
 
     protected function createPublic()
     {
