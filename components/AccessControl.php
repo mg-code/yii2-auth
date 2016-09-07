@@ -57,7 +57,7 @@ class AccessControl extends \yii\base\ActionFilter
 
         // Check for allowedAction method and match. This works only for checking acces of current action.
         if ($action->controller->hasMethod('allowAction') && in_array($action->id, $action->controller->allowAction())) {
-            return false;
+            return true;
         }
 
         $permissionName = $action->getUniqueId();
